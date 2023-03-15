@@ -1,0 +1,195 @@
+
+## Web Scraing Job Postings from Glassdoor
+The micro project is part of a larger team project of discovering the most in-demand Data Science skills
+across various job boards. This part of the project is focused on extracting 25 job postings from Glassdoor 
+using the rvest and httr package as well and filtered through regular expressions. The actual amount of job postings scraped was 30, but the last 5 rows were removed when creating a dataframe to remain consistency with the other tables the rest of the team is creating.
+
+```{r}
+library(tidyverse)
+library(rvest)
+library(httr)
+
+```
+
+```{r}
+glassdoor_data <- read_html("https://www.glassdoor.com/Job/data-science-jobs-SRCH_KO0,12.htm?context=Jobs&clickSource=searchBox")
+
+```
+
+## Extracted: Position, Company, Location, Job Posting URL, 
+```{r}
+job_board <- rep("Glassdoor", 30)
+positions <- html_nodes(glassdoor_data, ".eigr9kq2 span") %>% html_text()
+company_name <- html_nodes(glassdoor_data, ".e1n63ojh0 span") %>% html_text()
+location <- html_nodes(glassdoor_data, ".e1rrn5ka0") %>% html_text()
+```
+
+
+```{r}
+job_urls <- glassdoor_data %>%
+  html_nodes("a.jobLink") %>%
+  html_attr("href") 
+job_urls <- unique(job_urls)
+job_urls <- str_c("https://www.glassdoor.com", job_urls)
+```
+
+```{r}
+#Create a list to store the vectors for each URL
+job_urlinfo <- list()
+
+# Loop through the URLs and read each page using read_html()
+for (i in seq_along(job_urls)) {
+  job_urlinfo[[i]] <- read_html(job_urls[i])
+}
+```
+
+This vector is created to retrieve the conent of the job postings that
+will prove essential for the rest of the data scraping.
+```{r}
+job_req <- list()
+for (i in 1:30) {
+  job_req[[i]] <- job_urlinfo[[i]] %>% html_elements("#JobDescriptionContainer") %>% html_text()
+}
+job_req <- unlist(job_req)
+```
+
+## Education Requirements
+```{r}
+educ_req <- list()
+
+for (i in seq_along(job_req)) {
+  educ_req[[i]] <- str_extract_all(job_req[[i]], "(?i)(Advanced Degree|Degree in|Bachelor('s)?|Master('s)?)([(\\s\\w)?(^.(,)?)?\\n]*)?([^.\\n]*)?")
+}
+
+educ_req
+```
+
+Degree 
+```{r}
+degree <- list()
+
+for (i in seq_along(educ_req)) {
+  degree[[i]] <- str_extract(educ_req[[i]], "(?i)(Advanced Degree|Degree|Bachelor('s)?|Master('s)?)")
+}
+```
+
+Major
+```{r}
+major <- list()
+
+for (i in seq_along(educ_req)) {
+  major[[i]] <- str_extract_all(educ_req[[i]], "(?i)(Marketing|Advertising|Statistics|Finance|Data Science|Information Science|Information Technology|Operation(s)? Research| Mathematics|Math|ScienceEconomics|Engineering|Business|management information system|human resource|psychology|Supply Chain Management|Health Information Management)")
+}
+
+major <- sapply(major, paste, collapse = ", ")
+```
+
+
+## Skiils
+```{r}
+skills <- list()
+
+for (i in seq_along(job_req)) {
+  skills[[i]] <- str_extract_all(job_req[[i]], "((R\\s)|(?i)(Requirement(s)?|Experience|Qualification(s)?|Python|SoTA|NLP|Natural Language Processing|\\bAI|Artificial Intelligence|\\bML|Machine Learning|PyTorch|Tensorflow|SQL|Power BI|Tableau|Data Visualization|Data Analysis|Statistical|statistic|Google|SAP|Github|Excel)[^.\\n]*)")
+}
+
+skills <- sapply(skills, paste, collapse = ", ")
+```
+
+extracted skills
+```{r}
+extracted_skills <- list()
+
+for (i in seq_along(skills)) {
+  extracted_skills[[i]] <- str_extract_all(skills[[i]],  "(R\\s)|(?i)(Python|SoTA|NLP|Natural Language Processing|\\bAI|Artificial Intelligence|\\bML|Machine Learning|PyTorch|Tensorflow|SQL|Power BI|Tableau|Data Visualization|Data Analysis|Statistical|statistic|Google|SAP|Github|Excel)")
+}
+
+extracted_skills <- sapply(extracted_skills, paste, collapse = ", ")
+extracted_skills
+```
+
+
+##Years of Experience
+```{r}
+years_experience <- list()
+
+for (i in seq_along(job_req)) {
+  years_experience[[i]] <- str_extract_all(job_req[[i]],  "(?i)(\\d{1}(?:-\\d{1})?(\\+)?)\\s(year((')?s)?)[^.\\n]*")
+}
+
+years_experience <- sapply(years_experience, paste, collapse = ", ")
+years_experience
+```
+
+
+## Work Enviornment
+extract In-person, Remote, or Hybrid strings 
+```{r}
+work_environment <- list()
+
+for (i in seq_along(job_req)) {
+  work_environment[[i]] <- str_extract_all(job_req[[i]],  "(?i)(Remote|In-Person|In Person|On-Location|On location|Hybrid)")
+}
+
+work_environment <- sapply(work_environment, paste, collapse = ", ")
+work_environment
+```
+
+## Seniority
+extract Entry-level, Associate, Junior, or Senior strings.
+the identification of what positions are under what seniority level was
+determined by referencing the Indeed article:
+https://www.indeed.com/career-advice/career-development/seniority-level
+
+```{r}
+seniority_lvl <- list()
+
+for (i in seq_along(positions)) {
+  seniority_lvl[[i]] <- str_extract_all(positions[[i]],  "((?i)(Entry|Assistant|Intern|Trainee|Associate|Manager|Lead|Officer|Supervisor|Junior|Senior|Executive|\\bVP|Vice President|Head of|Architect))")
+}
+
+seniority_lvl <- sapply(seniority_lvl, paste, collapse = ", ")
+seniority_lvl
+```
+
+
+Unlisting to create a dataframe
+```{r}
+work_environment <- unlist(work_environment)
+years_experience <- unlist(years_experience)
+degree <- unlist(degree)
+major <- unlist(major)
+
+```
+
+##Creating a dataframe 
+```{r}
+data <- data.frame(job_board, seniority_lvl, positions, company_name, location, work_environment, degree, major, extracted_skills, years_experience,  job_urls)
+
+data <- head(data, n = nrow(data) - 5)
+data
+```
+
+
+##CSV
+```{r}
+write.csv(data, "glassdoor-webscrape.csv")
+
+```
+
+
+##Notes to self
+The seniority_level needs to be refined. Extracting status from the position 
+title isnt enough for status determination for all job postings. Yet, the content
+within the job postings are not sufficient as well unless its descriptively expressed. 
+
+Industry of each posting needs to be included as well, but information are consistently
+shown in a different tab within each job posting. How can the job's industry be extracted
+while maintaining the ability for this code to update accordingly to the job
+board?
+
+Years of experience are not simply numerical but maintains the context of the 
+type of experience to have a number of experience for. It can be manipulated when 
+the team analyzes the overall code.
+
+
