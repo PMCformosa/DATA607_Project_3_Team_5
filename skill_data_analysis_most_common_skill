@@ -1,0 +1,69 @@
+---
+title: "Project 3_analysis_Team 5"
+author: "Team 5_ Peiming Chen"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+This section is to find the most common skills listed across all the job positions 
+
+Loading packages
+```{r load-packages, message=FALSE}
+library(tidyverse)
+library(openintro)
+library(stringr)
+library(ggplot2)
+```
+
+### Load data 
+
+Load the cleaned jobs data from github account 
+
+```{r code-chunk-label}
+DS_Jobs <- read.csv("https://raw.githubusercontent.com/PMCformosa/Project-3-/main/jobs_data_clean.csv")
+
+DS_Jobs
+```
+
+### Exercise 2
+
+```{r}
+head(DS_Jobs, n = 5180)
+```
+
+Remove all the NA from the dataset 
+
+```{r}
+DS_Jobs1 <- na.omit(DS_Jobs)
+DS_Jobs1
+
+```
+
+Remove duplicated skill data within each job position
+```{r}
+DS_Jobs2 <- DS_Jobs1[!duplicated(DS_Jobs1), ]
+DS_Jobs2
+```
+
+Displaying the discrete skills column from the data and listing them by frequency from high to low 
+```{r}
+library("dplyr")
+
+dis_freq <- count(DS_Jobs2, 'discrete_skill')
+show(dis_freq)
+
+df3 <- dis_freq[order(dis_freq$freq, decreasing = TRUE),]
+show(df3)
+```
+
+Top 12 most common skills listed across all jobs and positions were found and graphed in a bar chart 
+```{r}
+df4 <- df3[df3$freq >= 20, ]
+df4
+ggplot(data= df4, aes(x= freq, y= discrete_skill, color= discrete_skill)) + geom_col()
+```
+
+Conclusion : 
+ Analysis skills , Python, machine learning, analytic skills and communication are the top 5 common skills of all the listed data science job positions 
+
+
+
