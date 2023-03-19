@@ -1,0 +1,36 @@
+---
+title: "Data Science Skills"
+author: "Kory Martin, Joe Garcia, Peiming Chen, Genesis Middleton"
+date: "2023-03-13"
+output: 
+  html_document:
+    toc: true
+---
+
+## Load Packages
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+## Clean Raw Data
+
+```{r}
+
+
+```
+
+## Import Data into Database
+
+```{r}
+
+
+```
+## Analysis of Data
+
+```{r}
+
+
+```
+
+## Conclusion
